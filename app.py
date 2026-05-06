@@ -299,6 +299,37 @@ def _render_calculo_mp_ts(mp_max, ts_req, criterio_ts, zeta, sigma, omega_n, ome
     st.success("**O polo dominante desejado para o projeto é:**")
     st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} {sinal} j{abs(omega_d):.4f}")
 
+def _render_sistema_base(sistema, polos, zeros, label="G_{base}(s)"):
+    st.markdown("**Forma Polinomial:**")
+    st.latex(rf"{label} = {get_tf_latex(sistema)}")
+    
+    st.markdown("**Forma Fatorada (Raízes explícitas):**")
+    st.latex(rf"{label} = {get_zpk_latex(sistema)}")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Polos do Sistema:**")
+        if len(polos) == 0:
+            st.markdown("- *Nenhum*")
+        else:
+            for p in polos:
+                if abs(p.imag) < 1e-8:
+                    st.markdown(f"- $s = {p.real:.4g}$")
+                else:
+                    sinal = "+" if p.imag >= 0 else "-"
+                    st.markdown(f"- $s = {p.real:.4g} {sinal} j{abs(p.imag):.4g}$")
+    with col2:
+        st.markdown("**Zeros do Sistema:**")
+        if len(zeros) == 0:
+            st.markdown("- *Nenhum*")
+        else:
+            for z in zeros:
+                if abs(z.imag) < 1e-8:
+                    st.markdown(f"- $s = {z.real:.4g}$")
+                else:
+                    sinal = "+" if z.imag >= 0 else "-"
+                    st.markdown(f"- $s = {z.real:.4g} {sinal} j{abs(z.imag):.4g}$")
+
 def _print_contribuicoes_angulo(zeros, polos, s_d):
     angulos_zeros = []
     angulos_polos = []
@@ -607,6 +638,9 @@ def resolver_pd():
     sigma, omega_d = -s_d.real, abs(s_d.imag)
 
     st.subheader("Passo 2: Aplicar a Condição de Ângulo")
+    st.markdown("O sistema base analisado é a própria planta em malha aberta $G(s)H(s)$:")
+    _render_sistema_base(GH, polos, zeros, "G(s)H(s)")
+    
     ang_total = _print_contribuicoes_angulo(zeros, polos, s_d)
     phi_c_deg = _normalize_angle_deg(-180.0 - ang_total)
     
@@ -734,12 +768,12 @@ def resolver_pi():
     sistema_base = ct.series(GH, ct.tf([1], [1, 0]))
     polos_base, zeros_base = sistema_base.poles(), sistema_base.zeros()
     
-    st.markdown("O controlador PI adiciona a ação integral (um polo na origem) ao sistema. Este é o sistema base $G_{base}(s)$ que será usado para a análise de ângulo e módulo:")
-    st.latex(rf"G_{{base}}(s) = \frac{{G(s)H(s)}}{{s}} = {_tf_to_latex(sistema_base, 's')}")
+    st.subheader("Passo 2: Aplicar a Condição de Ângulo")
+    st.markdown("O sistema base para a análise de ângulo inclui o polo na origem (ação integral):")
+    _render_sistema_base(sistema_base, polos_base, zeros_base, "G_{base}(s)")
 
     sigma, omega_d = -s_d.real, abs(s_d.imag)
 
-    st.subheader("Passo 2: Aplicar a Condição de Ângulo")
     ang_total = _print_contribuicoes_angulo(zeros_base, polos_base, s_d)
     phi_c_deg = _normalize_angle_deg(-180.0 - ang_total)
     
@@ -865,8 +899,8 @@ def resolver_pid():
     polos_base, zeros_base = sistema_base.poles(), sistema_base.zeros()
 
     st.subheader("Passo 2: Aplicar a Condição de Ângulo para encontrar o zero duplo do controlador ($-z_c$)")
-    st.markdown("O sistema base é a planta $G(s)H(s)$ associada ao polo do PID na origem (ação integral).")
-    st.latex(rf"G_{{base}}(s) = {get_zpk_latex(sistema_base)}")
+    st.markdown("O sistema base para a análise inclui o polo na origem (ação integral):")
+    _render_sistema_base(sistema_base, polos_base, zeros_base, "G_{base}(s)")
 
     ang_total = _print_contribuicoes_angulo(zeros_base, polos_base, s_d)
 
