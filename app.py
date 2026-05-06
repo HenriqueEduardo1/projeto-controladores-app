@@ -635,7 +635,13 @@ def resolver_pd():
 
     st.subheader("Passo 4: Determinar os Parâmetros Finais $K_p$ e $K_d$")
     Kd, Kp = Kc, Kc * zc
-    st.latex(rf"K_d = K_c = {Kd:.4f} \quad \text{{e}} \quad K_p = K_c \cdot z_c = {Kp:.4f}")
+    
+    st.markdown("O controlador $G_c(s) = K_p + K_d s$ é derivado da forma fatorada $G_c(s) = K_c(s + z_c)$. Expandindo a equação:")
+    st.latex(r"G_c(s) = K_c s + K_c z_c")
+    
+    st.markdown("**Cálculo dos Ganhos:**")
+    st.latex(rf"K_d = K_c = {Kd:.4f}")
+    st.latex(rf"K_p = K_c \cdot z_c = {Kc:.4f} \cdot {zc:.4f} = {Kp:.4f}")
 
     st.markdown("---")
     st.markdown("### Conclusão")
@@ -765,7 +771,13 @@ def resolver_pi():
 
     st.subheader("Passo 4: Determinar os Parâmetros Finais $K_p$ e $K_i$")
     Kp, Ki = Kc, Kc * zc
-    st.latex(rf"K_p = K_c = {Kp:.4f} \quad \text{{e}} \quad K_i = K_c \cdot z_c = {Ki:.4f}")
+    
+    st.markdown(r"O controlador $G_c(s) = K_p + K_i/s$ é derivado da forma fatorada $G_c(s) = \frac{K_c(s + z_c)}{s}$. Expandindo a equação:")
+    st.latex(r"G_c(s) = K_c + \frac{K_c z_c}{s}")
+    
+    st.markdown("**Cálculo dos Ganhos:**")
+    st.latex(rf"K_p = K_c = {Kp:.4f}")
+    st.latex(rf"K_i = K_c \cdot z_c = {Kc:.4f} \cdot {zc:.4f} = {Ki:.4f}")
 
     st.markdown("---")
     st.markdown("### Conclusão")
@@ -889,8 +901,13 @@ def resolver_pid():
     Kd, Kp, Ki = Kc, 2 * Kc * zc, Kc * (zc ** 2)
 
     st.subheader("Passo 4: Determinar os Parâmetros Finais $K_p$, $K_i$ e $K_d$")
-    st.latex(r"G_c(s) = \frac{K_c(s+z_c)^2}{s} = \frac{K_d s^2 + K_p s + K_i}{s}")
-    st.latex(rf"K_d = {Kd:.4f} \quad K_p = {Kp:.4f} \quad K_i = {Ki:.4f}")
+    st.markdown("A partir da equivalência algébrica da forma fatorada do controlador para a forma padrão do PID:")
+    st.latex(r"G_c(s) = \frac{K_c(s+z_c)^2}{s} = \frac{K_c(s^2 + 2z_cs + z_c^2)}{s} = \frac{K_d s^2 + K_p s + K_i}{s}")
+    
+    st.markdown("**Cálculo dos Ganhos:**")
+    st.latex(rf"K_d = K_c = {Kd:.4f}")
+    st.latex(rf"K_p = 2 \cdot K_c \cdot z_c = 2 \cdot {Kc:.4f} \cdot {zc:.4f} = {Kp:.4f}")
+    st.latex(rf"K_i = K_c \cdot z_c^2 = {Kc:.4f} \cdot ({zc:.4f})^2 = {Ki:.4f}")
 
     st.markdown("---")
     st.markdown("### Conclusão")
