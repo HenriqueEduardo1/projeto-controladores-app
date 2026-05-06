@@ -271,6 +271,34 @@ def _calc_zc(sigma, omega_d, phi_c_deg):
         return sigma
     return sigma + omega_d / math.tan(phi_c_rad)
 
+def _render_calculo_zeta_omega(zeta, omega_n, sigma, omega_d, s_d):
+    st.markdown("**Cálculo das componentes do polo:**")
+    st.latex(rf"\text{{Parte Real }}(\sigma) = \zeta \cdot \omega_n = {zeta:.4f} \cdot {omega_n:.4f} = {sigma:.4f}")
+    st.latex(rf"\text{{Parte Imaginária }}(\omega_d) = \omega_n \cdot \sqrt{{1-\zeta^2}} = {omega_n:.4f} \cdot \sqrt{{1-{zeta:.4f}^2}} = {omega_d:.4f} \text{{ rad/s}}")
+    
+    sinal = "+" if omega_d >= 0 else "-"
+    st.success("**O polo dominante desejado para o projeto é:**")
+    st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} {sinal} j{abs(omega_d):.4f}")
+
+def _render_calculo_mp_ts(mp_max, ts_req, criterio_ts, zeta, sigma, omega_n, omega_d, s_d):
+    mp_decimal = mp_max / 100.0
+    fator_ts = 4.0 if criterio_ts <= 2.5 else 3.0
+    
+    st.markdown("**Fator de Amortecimento ($\zeta$) a partir do Overshoot ($M_p$)**")
+    st.latex(r"\zeta = \frac{-\ln(M_p/100)}{\sqrt{\pi^2 + \ln(M_p/100)^2}}")
+    st.latex(rf"\zeta = \frac{{-\ln({mp_decimal:.4f})}}{{\sqrt{{\pi^2 + \ln({mp_decimal:.4f})^2}}}} = {zeta:.4f}")
+
+    st.markdown(f"**Parte Real do Polo ($\sigma$) a partir do Tempo de Acomodação ($t_s$)** (critério {criterio_ts}%)")
+    st.latex(rf"\sigma = \frac{{{fator_ts:.0f}}}{{t_s}} = \frac{{{fator_ts:.0f}}}{{{ts_req}}} = {sigma:.4f}")
+
+    st.markdown("**Frequências e Polo Dominante Desejado ($s_d$)**")
+    st.latex(rf"\omega_n = \frac{{\sigma}}{{\zeta}} = \frac{{{sigma:.4f}}}{{{zeta:.4f}}} = {omega_n:.4f} \text{{ rad/s}}")
+    st.latex(rf"\omega_d = \omega_n \cdot \sqrt{{1-\zeta^2}} = {omega_n:.4f} \cdot \sqrt{{1-{zeta:.4f}^2}} = {omega_d:.4f} \text{{ rad/s}}")
+    
+    sinal = "+" if omega_d >= 0 else "-"
+    st.success("**O polo dominante desejado para o projeto é:**")
+    st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} {sinal} j{abs(omega_d):.4f}")
+
 def _print_contribuicoes_angulo(zeros, polos, s_d):
     angulos_zeros = []
     angulos_polos = []
@@ -492,6 +520,7 @@ def _discretizar_controlador(tipo, Kp, Ki, Kd):
     Gc_z = ct.tf(num_coeffs, den_coeffs, dt=T)
     st.success(f"**Sistema discretizado com período de amostragem:** $dt = {Gc_z.dt}$ s")
 
+
 def resolver_pd():
     st.markdown("### RESOLUÇÃO - PROJETO DE CONTROLADOR PD")
     st.markdown("**Insira os coeficientes dos polinômios separados por espaço (ex: 4 16):**")
@@ -540,8 +569,9 @@ def resolver_pd():
 
         st.info(f"**Requisitos:** Fator de Amortecimento ($\zeta$) = {zeta:.4f} e Frequência Natural ($\omega_n$) = {omega_n:.4f} rad/s.")
         sigma, omega_d, s_d = _calc_sd_from_zeta_omega(zeta, omega_n)
+        
         st.subheader("Passo 1: Determinar a Localização do Polo Dominante Desejado ($s_d$)")
-        st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} + j{omega_d:.4f}")
+        _render_calculo_zeta_omega(zeta, omega_n, sigma, omega_d, s_d)
 
     elif modo.startswith("3"):
         st.markdown("Informe as coordenadas do polo desejado ($s_d = a + bj$):")
@@ -570,8 +600,9 @@ def resolver_pd():
 
         zeta, sigma, omega_n, omega_d, s_d = _calc_sd_from_mp_ts(mp_max, ts_req, criterio_ts)
         st.info(f"**Requisitos:** $M_p \le {mp_max}\%$ e $t_s({criterio_ts}\%) < {ts_req}\text{{ s}}$.")
+        
         st.subheader("Passo 1: Traduzir os Requisitos de Desempenho para um Polo Dominante ($s_d$)")
-        st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} + j{omega_d:.4f}")
+        _render_calculo_mp_ts(mp_max, ts_req, criterio_ts, zeta, sigma, omega_n, omega_d, s_d)
 
     sigma, omega_d = -s_d.real, abs(s_d.imag)
 
@@ -613,6 +644,7 @@ def resolver_pd():
 
     _discretizar_controlador("PD", Kp, 0.0, Kd)
 
+
 def resolver_pi():
     st.markdown("### RESOLUÇÃO - PROJETO DE CONTROLADOR PI")
     st.markdown("**Insira os coeficientes dos polinômios separados por espaço (ex: 5 25 20):**")
@@ -651,7 +683,9 @@ def resolver_pi():
         
         st.info(f"**Requisitos:** Fator de Amortecimento ($\zeta$) = {zeta:.4f} e Frequência Natural ($\omega_n$) = {omega_n:.4f} rad/s.")
         sigma, omega_d, s_d = _calc_sd_from_zeta_omega(zeta, omega_n)
-        st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} + j{omega_d:.4f}")
+        
+        st.subheader("Cálculo do Polo Dominante Desejado ($s_d$)")
+        _render_calculo_zeta_omega(zeta, omega_n, sigma, omega_d, s_d)
 
     elif modo.startswith("3"):
         st.markdown("Informe as coordenadas do polo desejado ($s_d = a + bj$):")
@@ -665,6 +699,7 @@ def resolver_pi():
             
         s_d = complex(real_part, imag_part)
         sinal = "+" if imag_part >= 0 else "-"
+        st.subheader("Polo de Malha Fechada Desejado")
         st.latex(rf"s_d = {real_part:.4f} {sinal} j{abs(imag_part):.4f}")
 
     else:
@@ -679,7 +714,9 @@ def resolver_pi():
 
         zeta, sigma, omega_n, omega_d, s_d = _calc_sd_from_mp_ts(mp_max, ts_req, criterio_ts)
         st.info(f"**Requisitos:** $M_p \le {mp_max}\%$ e $t_s({criterio_ts}\%) < {ts_req}\text{{ s}}$.")
-        st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} + j{omega_d:.4f}")
+        
+        st.subheader("Tradução dos Requisitos de Desempenho para um Polo Dominante ($s_d$)")
+        _render_calculo_mp_ts(mp_max, ts_req, criterio_ts, zeta, sigma, omega_n, omega_d, s_d)
 
     st.markdown("---")
     st.subheader("Passo 1: Determinar a Função de Transferência de Malha Aberta")
@@ -737,6 +774,7 @@ def resolver_pi():
 
     _discretizar_controlador("PI", Kp, Ki, 0.0)
 
+
 def resolver_pid():
     st.markdown("### RESOLUÇÃO - PROJETO DE CONTROLADOR PID")
     st.markdown("**Insira os coeficientes dos polinômios separados por espaço:**")
@@ -775,8 +813,9 @@ def resolver_pid():
 
         st.info(f"**Requisitos:** Fator de Amortecimento ($\zeta$) = {zeta:.4f} e Frequência Natural ($\omega_n$) = {omega_n:.4f} rad/s.")
         sigma, omega_d, s_d = _calc_sd_from_zeta_omega(zeta, omega_n)
+        
         st.subheader("Passo 1: Determinar a Localização do Polo Dominante Desejado ($s_d$)")
-        st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} + j{omega_d:.4f}")
+        _render_calculo_zeta_omega(zeta, omega_n, sigma, omega_d, s_d)
 
     elif modo.startswith("3"):
         st.markdown("Informe as coordenadas do polo desejado ($s_d = a + bj$):")
@@ -789,8 +828,8 @@ def resolver_pid():
             st.stop()
             
         s_d = complex(real_part, imag_part)
-        st.subheader("Passo 1: Polo de Malha Fechada Desejado")
         sinal = "+" if imag_part >= 0 else "-"
+        st.subheader("Passo 1: Polo de Malha Fechada Desejado")
         st.latex(rf"s_d = {real_part:.4f} {sinal} j{abs(imag_part):.4f}")
 
     else:
@@ -805,8 +844,9 @@ def resolver_pid():
 
         zeta, sigma, omega_n, omega_d, s_d = _calc_sd_from_mp_ts(mp_max, ts_req, criterio_ts)
         st.info(f"**Requisitos:** $M_p \le {mp_max}\%$ e $t_s({criterio_ts}\%) < {ts_req}\text{{ s}}$, com zeros do PID reais e iguais.")
+        
         st.subheader("Passo 1: Traduzir os Requisitos de Desempenho para um Polo Dominante ($s_d$)")
-        st.latex(rf"s_d = -\sigma + j\omega_d = -{sigma:.4f} + j{omega_d:.4f}")
+        _render_calculo_mp_ts(mp_max, ts_req, criterio_ts, zeta, sigma, omega_n, omega_d, s_d)
 
     GH = ct.series(G_s, H_s)
     sistema_base = ct.series(GH, ct.tf([1], [1, 0]))
@@ -859,6 +899,7 @@ def resolver_pid():
 
     _discretizar_controlador("PID", Kp, Ki, Kd)
 
+
 def resolver_gc_generico():
     st.markdown("### RESOLUÇÃO - CONTROLADOR GENÉRICO $G_c(s) = \\frac{a}{s+b}$")
     st.markdown("**Insira os coeficientes dos polinômios separados por espaço:**")
@@ -898,6 +939,9 @@ def resolver_gc_generico():
         st.info(f"**Requisitos:** Fator de Amortecimento ($\zeta$) = {zeta:.4f} e Frequência Natural ($\omega_n$) = {omega_n:.4f} rad/s.")
         sigma, omega_d, s_d = _calc_sd_from_zeta_omega(zeta, omega_n)
         
+        st.subheader("Tradução dos Requisitos para o Polo Dominante ($s_d$)")
+        _render_calculo_zeta_omega(zeta, omega_n, sigma, omega_d, s_d)
+
     elif modo.startswith("3"):
         st.markdown("Informe as coordenadas do polo desejado ($s_d = a + bj$):")
         col1, col2 = st.columns(2)
@@ -922,6 +966,9 @@ def resolver_gc_generico():
 
         zeta, sigma, omega_n, omega_d, s_d = _calc_sd_from_mp_ts(mp_max, ts_req, criterio_ts)
         st.info(f"**Requisitos:** $M_p \le {mp_max}\%$ e $t_s({criterio_ts}\%) < {ts_req}\text{{ s}}$.")
+        
+        st.subheader("Tradução dos Requisitos de Desempenho ($s_d$)")
+        _render_calculo_mp_ts(mp_max, ts_req, criterio_ts, zeta, sigma, omega_n, omega_d, s_d)
 
     st.markdown("---")
     st.markdown("**Componentes do Sistema:**")
