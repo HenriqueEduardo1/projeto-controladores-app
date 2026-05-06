@@ -115,6 +115,13 @@ input::placeholder {
     opacity: 1 !important;
 }
 
+div[data-testid="stAlert"],
+div[data-testid="stAlert"] p,
+div[data-testid="stAlert"] span,
+div[data-testid="stAlert"] div {
+    color: var(--ink) !important;
+}
+
 .hero {
     border: 1px solid rgba(15, 76, 66, 0.18);
     border-radius: 18px;
