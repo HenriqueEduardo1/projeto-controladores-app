@@ -795,10 +795,18 @@ def resolver_pi():
     st.markdown("---")
     st.subheader("Passo 1: Determinar a Função de Transferência de Malha Aberta")
 
+    st.markdown("**Análise dos Componentes Individuais:**")
+    st.latex(rf"G(s) = {_tf_to_latex(G_s, 's')}")
+    st.latex(rf"H(s) = {_tf_to_latex(H_s, 's')}")
+
     cancel = _find_cancellations(G_s.zeros(), H_s.poles())
-    if cancel: st.info(f"**Nota:** Ao combinar $G(s)$ e $H(s)$, ocorre um cancelamento polo-zero em $s = {_fmt_num(cancel[0])}$.")
+    if cancel: 
+        st.info(f"**Nota:** Ao combinar $G(s)$ e $H(s)$, ocorre um cancelamento polo-zero em $s = {_fmt_num(cancel[0])}$.")
 
     GH = ct.series(G_s, H_s)
+    st.markdown("**Sistema Combinado $G(s)H(s)$:**")
+    st.latex(rf"GH(s) = {_tf_to_latex(GH, 's')}")
+
     sistema_base = ct.series(GH, ct.tf([1], [1, 0]))
     polos_base, zeros_base = sistema_base.poles(), sistema_base.zeros()
     
