@@ -244,6 +244,11 @@ def _fmt_num(x):
         return f"{x.real:+.2f}{x.imag:+.2f}j"
     return f"{float(np.real(x)):+.2f}"
 
+def format_complex_latex(c):
+    if abs(c.imag) < 1e-8: return f"{c.real:.4f}"
+    sinal = "+" if c.imag >= 0 else "-"
+    return f"{c.real:.4f} {sinal} j{abs(c.imag):.4f}"
+
 def _normalize_angle_deg(angle):
     return (angle + 180) % 360 - 180
 
@@ -333,11 +338,6 @@ def _render_sistema_base(sistema, polos, zeros, label="G_{base}(s)"):
 def _print_contribuicoes_angulo(zeros, polos, s_d):
     angulos_zeros = []
     angulos_polos = []
-
-    def format_complex_latex(c):
-        if abs(c.imag) < 1e-8: return f"{c.real:.4g}"
-        sinal = "+" if c.imag >= 0 else "-"
-        return f"{c.real:.4g} {sinal} j{abs(c.imag):.4g}"
 
     st.markdown("**Contribuição de Ângulo dos Zeros:**")
     if len(zeros) == 0:
@@ -652,11 +652,35 @@ def resolver_pd():
     st.success(f"Portanto, o zero do controlador está em **s = {-zc:.4f}**")
 
     st.subheader("Passo 3: Aplicar a Condição de Módulo")
+    st.markdown("A condição de módulo estabelece que, no ponto $s_d$, o ganho total do sistema deve ser 1:")
+    st.latex(r"\left| G_c(s_d)G(s_d)H(s_d) \right| = 1")
+    st.markdown("Expandindo a equação para isolar $K_c$:")
     st.latex(r"\left| K_c (s_d + z_c) \right| \cdot \left| G(s_d)H(s_d) \right| = 1")
 
     mags_polos = [abs(s_d - p) for p in polos]
     mags_zeros = [abs(s_d - z) for z in zeros]
     mag_zc = abs(s_d + zc)
+
+    st.markdown("**Calculando a magnitude (distância) de cada vetor de polo/zero até $s_d$:**")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Distâncias dos Polos da Planta:**")
+        for i, p in enumerate(polos):
+            p_str = format_complex_latex(p)
+            st.markdown(f"- **Polo {i+1}** (em {p_str}):  \n$|s_d - ({p_str})| = {mags_polos[i]:.4f}$")
+
+    with col2:
+        st.markdown("**Distâncias dos Zeros da Planta:**")
+        if len(zeros) == 0:
+            st.markdown("- *Nenhum zero na planta.*")
+        else:
+            for i, z in enumerate(zeros):
+                z_str = format_complex_latex(z)
+                st.markdown(f"- **Zero {i+1}** (em {z_str}):  \n$|s_d - ({z_str})| = {mags_zeros[i]:.4f}$")
+                
+        st.markdown("**Distância do Zero do Controlador:**")
+        st.markdown(f"- **Zero** (em {-zc:.4f}):  \n$|s_d - ({-zc:.4f})| = {mag_zc:.4f}$")
 
     prod_polos = np.prod(mags_polos)
     prod_zeros = np.prod(mags_zeros) if len(mags_zeros) > 0 else 1.0
@@ -664,7 +688,17 @@ def resolver_pd():
     denominador_total = K_planta * prod_zeros * mag_zc
     Kc = prod_polos / denominador_total
 
-    st.latex(r"K_c = \frac{\prod |s_d - p_i|}{K_{planta} \cdot \prod |s_d - z_i| \cdot |s_d + z_c|}")
+    st.markdown("**Calculando o Numerador e Denominador da fórmula de $K_c$:**")
+    st.markdown(rf"- **Numerador** (produto das distâncias dos polos): **{prod_polos:.4f}**")
+    st.markdown(rf"- **Denominador** ($K_{{planta}} \cdot \prod \text{{dist. zeros}} \cdot |s_d + z_c|$): **{denominador_total:.4f}**")
+
+    st.markdown("Substituindo na fórmula ($K_c = \\frac{\\text{Numerador}}{\\text{Denominador}}$):")
+    if len(zeros) > 0:
+        st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{K_planta:.4g} \cdot {prod_zeros:.4f} \cdot {mag_zc:.4f}}}")
+    else:
+        st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{K_planta:.4g} \cdot {mag_zc:.4f}}}")
+
+    st.markdown("**Resultado Final para $K_c$:**")
     st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{denominador_total:.4f}}} = {Kc:.4f}")
 
     st.subheader("Passo 4: Determinar os Parâmetros Finais $K_p$ e $K_d$")
@@ -788,11 +822,35 @@ def resolver_pi():
         st.warning("**Nota Importante:** Um $z_c \approx 0$ indica o cancelamento do polo na origem. O LGR do sistema base já passava pelo ponto desejado e a ação integral foi anulada (comportando-se apenas como P).")
 
     st.subheader("Passo 3: Aplicar a Condição de Módulo")
+    st.markdown("A condição de módulo estabelece que, no ponto $s_d$, o ganho total do sistema deve ser 1:")
+    st.latex(r"\left| G_c(s_d)G_{base}(s_d) \right| = 1")
+    st.markdown("Expandindo a equação (lembrando que o termo $1/s$ já foi absorvido na $G_{base}$):")
     st.latex(r"\left| K_c (s_d + z_c) \right| \cdot \left| G_{base}(s_d) \right| = 1")
 
     mags_polos = [abs(s_d - p) for p in polos_base]
     mags_zeros = [abs(s_d - z) for z in zeros_base]
     mag_zc = abs(s_d + zc)
+
+    st.markdown("**Calculando a magnitude (distância) de cada vetor de polo/zero até $s_d$:**")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Distâncias dos Polos da Base:**")
+        for i, p in enumerate(polos_base):
+            p_str = format_complex_latex(p)
+            st.markdown(f"- **Polo {i+1}** (em {p_str}):  \n$|s_d - ({p_str})| = {mags_polos[i]:.4f}$")
+
+    with col2:
+        st.markdown("**Distâncias dos Zeros da Base:**")
+        if len(zeros_base) == 0:
+            st.markdown("- *Nenhum zero no sistema base.*")
+        else:
+            for i, z in enumerate(zeros_base):
+                z_str = format_complex_latex(z)
+                st.markdown(f"- **Zero {i+1}** (em {z_str}):  \n$|s_d - ({z_str})| = {mags_zeros[i]:.4f}$")
+                
+        st.markdown("**Distância do Zero do Controlador:**")
+        st.markdown(f"- **Zero** (em {-zc:.4f}):  \n$|s_d - ({-zc:.4f})| = {mag_zc:.4f}$")
 
     prod_polos = np.prod(mags_polos)
     prod_zeros = np.prod(mags_zeros) if len(mags_zeros) > 0 else 1.0
@@ -800,9 +858,19 @@ def resolver_pi():
     denominador_total = K_sistema * prod_zeros * mag_zc
     Kc = prod_polos / denominador_total
 
-    st.latex(r"K_c = \frac{\prod |s_d - p_i|}{K_{sistema} \cdot \prod |s_d - z_i| \cdot |s_d + z_c|}")
-    st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{denominador_total:.4f}}} = {Kc:.4f}")
+    st.markdown("**Calculando o Numerador e Denominador da fórmula de $K_c$:**")
+    st.markdown(rf"- **Numerador** (produto das distâncias dos polos da base): **{prod_polos:.4f}**")
+    st.markdown(rf"- **Denominador** ($K_{{base}} \cdot \prod \text{{dist. zeros da base}} \cdot |s_d + z_c|$): **{denominador_total:.4f}**")
 
+    st.markdown("Substituindo na fórmula ($K_c = \\frac{\\text{Numerador}}{\\text{Denominador}}$):")
+    if len(zeros_base) > 0:
+        st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{K_sistema:.4g} \cdot {prod_zeros:.4f} \cdot {mag_zc:.4f}}}")
+    else:
+        st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{K_sistema:.4g} \cdot {mag_zc:.4f}}}")
+
+    st.markdown("**Resultado Final para $K_c$:**")
+    st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{denominador_total:.4f}}} = {Kc:.4f}")
+    
     st.subheader("Passo 4: Determinar os Parâmetros Finais $K_p$ e $K_i$")
     Kp, Ki = Kc, Kc * zc
     
@@ -916,9 +984,36 @@ def resolver_pid():
     st.latex(rf"z_c = \sigma + \frac{{\omega_d}}{{\tan(\phi_c)}} = {zc:.4f}")
     st.success(f"Portanto, o controlador tem um zero duplo em **s = {-zc:.4f}**")
 
+    st.subheader("Passo 3: Aplicar a Condição de Módulo")
+    st.markdown("A condição de módulo estabelece que, no ponto $s_d$, o ganho total do sistema deve ser 1:")
+    st.latex(r"\left| G_c(s_d)G_{base}(s_d) \right| = 1")
+    st.markdown("Expandindo a equação (lembrando que o $1/s$ já foi absorvido na $G_{base}$ e o PID tem um zero duplo):")
+    st.latex(r"\left| K_c (s_d + z_c)^2 \right| \cdot \left| G_{base}(s_d) \right| = 1")
+
     mags_polos = [abs(s_d - p) for p in polos_base]
     mags_zeros = [abs(s_d - z) for z in zeros_base]
     mag_zc = abs(s_d + zc)
+
+    st.markdown("**Calculando a magnitude (distância) de cada vetor de polo/zero até $s_d$:**")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Distâncias dos Polos da Base:**")
+        for i, p in enumerate(polos_base):
+            p_str = format_complex_latex(p)
+            st.markdown(f"- **Polo {i+1}** (em {p_str}):  \n$|s_d - ({p_str})| = {mags_polos[i]:.4f}$")
+
+    with col2:
+        st.markdown("**Distâncias dos Zeros da Base:**")
+        if len(zeros_base) == 0:
+            st.markdown("- *Nenhum zero no sistema base.*")
+        else:
+            for i, z in enumerate(zeros_base):
+                z_str = format_complex_latex(z)
+                st.markdown(f"- **Zero {i+1}** (em {z_str}):  \n$|s_d - ({z_str})| = {mags_zeros[i]:.4f}$")
+                
+        st.markdown("**Distância do Zero Duplo do PID:**")
+        st.markdown(f"- **Zero** (em {-zc:.4f}):  \n$|s_d - ({-zc:.4f})|^2 = ({mag_zc:.4f})^2 = {mag_zc**2:.4f}$")
 
     prod_polos = np.prod(mags_polos)
     prod_zeros = np.prod(mags_zeros) if len(mags_zeros) > 0 else 1.0
@@ -926,11 +1021,18 @@ def resolver_pid():
     denominador_total = K_sistema * prod_zeros * (mag_zc ** 2)
     Kc = prod_polos / denominador_total
 
-    st.subheader("Passo 3: Aplicar a Condição de Módulo")
-    st.latex(r"\left| K_c \frac{(s_d+z_c)^2}{s_d} G(s_d)H(s_d) \right|_{s = s_d} = 1")
-    st.latex(r"K_c = \frac{\prod |s_d - p_i|}{K_{sistema} \cdot \prod |s_d - z_i| \cdot |s_d + z_c|^2}")
+    st.markdown("**Calculando o Numerador e Denominador da fórmula de $K_c$:**")
+    st.markdown(rf"- **Numerador** (produto das distâncias dos polos da base): **{prod_polos:.4f}**")
+    st.markdown(rf"- **Denominador** ($K_{{base}} \cdot \prod \text{{dist. zeros da base}} \cdot |s_d + z_c|^2$): **{denominador_total:.4f}**")
+
+    st.markdown("Substituindo na fórmula ($K_c = \\frac{\\text{Numerador}}{\\text{Denominador}}$):")
+    if len(zeros_base) > 0:
+        st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{K_sistema:.4g} \cdot {prod_zeros:.4f} \cdot ({mag_zc:.4f})^2}}")
+    else:
+        st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{K_sistema:.4g} \cdot ({mag_zc:.4f})^2}}")
+
+    st.markdown("**Resultado Final para $K_c$:**")
     st.latex(rf"K_c = \frac{{{prod_polos:.4f}}}{{{denominador_total:.4f}}} = {Kc:.4f}")
-    st.success(f"Ganho do Controlador PID encontrado: **Kc = {Kc:.4f}**")
 
     Kd, Kp, Ki = Kc, 2 * Kc * zc, Kc * (zc ** 2)
 
@@ -1035,11 +1137,6 @@ def resolver_gc_generico():
 
     st.subheader("Passo 2: Calcular o valor do sistema $G(s)H(s)$ no ponto $s_d$")
     valor_GH_em_sd = ct.evalfr(G_s, s_d) * ct.evalfr(H_s, s_d)
-
-    def format_complex_latex(c):
-        if abs(c.imag) < 1e-12: return f"{c.real:.4f}"
-        sinal = "+" if c.imag >= 0 else "-"
-        return f"{c.real:.4f} {sinal} j{abs(c.imag):.4f}"
 
     st.latex(rf"G(s_d)H(s_d) = {format_complex_latex(valor_GH_em_sd)}")
 
