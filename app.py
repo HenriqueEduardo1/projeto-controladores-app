@@ -917,6 +917,16 @@ def resolver_pid():
     num_h, den_h = [float(x) for x in num_h_str.split()], [float(x) for x in den_h_str.split()]
 
     G_s, H_s = ct.tf(num_g, den_g), ct.tf(num_h, den_h)
+    GH = ct.series(G_s, H_s)
+
+    st.markdown("**Componentes do Sistema:**")
+    st.latex(rf"G(s) = {_tf_to_latex(G_s, 's')}")
+    st.latex(rf"H(s) = {_tf_to_latex(H_s, 's')}")
+    st.latex(rf"GH(s) = {_tf_to_latex(GH, 's')}")
+
+    cancel = _find_cancellations(G_s.zeros(), H_s.poles())
+    if cancel:
+        st.info(f"**Nota:** Ao combinar $G(s)$ e $H(s)$, ocorre um cancelamento polo-zero em $s = {_fmt_num(cancel[0])}$.")
 
     st.markdown("---")
     modo = st.radio(
